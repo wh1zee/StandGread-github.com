@@ -54,7 +54,7 @@
   <p>Войдите через Discord, чтобы крутить колесо, получать скины и пополнять баланс. При первом входе вы получите 20 коинов.</p>
   <button class="discord-btn" onclick="discordLogin()">Войти через Discord</button>
 </div>
-[29.09.2026 20:38] .: <div id="mainApp" class="hidden">
+ <div id="mainApp" class="hidden">
 <header>
   <div class="logo">🎯 Standoff 2 Upgrader</div>
   <div class="user-info">
@@ -132,7 +132,7 @@
         <button onclick="sendAdminSupport()" style="margin-top:10px;">Ответить</button>
         <h3 style="margin:20px 0 10px;">Добавить скин в колесо</h3>
         <input type="text" id="skinName" placeholder="Название скина">
-[29.09.2026 20:38] .: <input type="number" id="skinPrice" placeholder="Цена в коинах">
+        <input type="number" id="skinPrice" placeholder="Цена в коинах">
         <input type="text" id="skinColor" placeholder="Цвет (hex, например #ff5733)">
         <button onclick="addSkin()">Добавить</button>
         <h3 style="margin:20px 0 10px;">Текущие скины</h3>
@@ -229,8 +229,8 @@ async function handleDiscordCallback() {
     alert('Ошибка входа через Discord: ' + e.message);
     return false;
   }
-}
-[29.09.2026 20:38] .: function logout() {
+
+  function logout() {
   localStorage.removeItem('so2_user');
   currentUser = null;
   location.reload();
@@ -339,7 +339,7 @@ function createOrder() {
   var amount = parseInt(document.getElementById('amountInput').value);
   var contact = document.getElementById('contactInput').value.trim();
   if (!amount || amount < 100) { alert('Минимум 100 рублей'); return; }
-[29.09.2026 20:38] .: if (!contact) { alert('Укажите контакт'); return; }
+  if (!contact) { alert('Укажите контакт'); return; }
   var order = { id: Date.now(), method: method, amount: amount, coins: amount, contact: contact, status: 'pending', time: Date.now(), userId: currentUser.id, username: currentUser.username };
   state.orders.push(order);
   saveUserState();
