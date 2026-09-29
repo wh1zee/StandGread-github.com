@@ -1,0 +1,442 @@
+[29.09.2026 20:38] .: <!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Standoff 2 Upgrader</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+  body { background:#0d1117; color:#e6edf3; min-height:100vh; }
+  header { background:#161b22; padding:15px 30px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #30363d; flex-wrap:wrap; gap:10px; }
+  .logo { font-size:22px; font-weight:bold; color:#f0883e; }
+  .user-info { display:flex; align-items:center; gap:15px; }
+  .user-info img { width:36px; height:36px; border-radius:50%; border:2px solid #5865f2; }
+  .user-info .name { color:#e6edf3; font-weight:bold; }
+  .balance { background:#21262d; padding:10px 20px; border-radius:8px; border:1px solid #30363d; }
+  .balance span { color:#3fb950; font-weight:bold; }
+  .container { max-width:1200px; margin:30px auto; padding:0 20px; }
+  .tabs { display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; }
+  .tab { padding:10px 20px; background:#21262d; border-radius:8px; cursor:pointer; border:1px solid #30363d; }
+  .tab.active { background:#f0883e; color:#0d1117; font-weight:bold; }
+  .tab-content { background:#161b22; border-radius:12px; padding:30px; border:1px solid #30363d; }
+  .hidden { display:none; }
+  .wheel-section { text-align:center; }
+  .wheel-container { position:relative; width:420px; height:420px; margin:20px auto; max-width:100%; }
+  canvas { display:block; max-width:100%; }
+  .arrow { position:absolute; top:-5px; left:50%; transform:translateX(-50%); font-size:32px; color:#f0883e; z-index:10; text-shadow:0 0 10px #f0883e; }
+  button { background:#238636; color:white; border:none; padding:14px 40px; font-size:16px; border-radius:8px; cursor:pointer; font-weight:bold; transition:.2s; }
+  button:hover { background:#2ea043; }
+  button:disabled { background:#30363d; cursor:not-allowed; }
+  .discord-btn { background:#5865f2; display:flex; align-items:center; justify-content:center; gap:10px; margin:20px auto; }
+  .discord-btn:hover { background:#4752c4; }
+  .result-box { margin-top:20px; padding:20px; background:#21262d; border-radius:10px; display:none; }
+  .result-box.show { display:block; border:1px solid #f0883e; }
+  .deposit-panel input, .deposit-panel select { width:100%; padding:12px; margin:8px 0; background:#0d1117; border:1px solid #30363d; border-radius:6px; color:#e6edf3; }
+  .history-item { background:#21262d; padding:12px; border-radius:8px; margin-bottom:8px; display:flex; justify-content:space-between; border-left:3px solid #3fb950; flex-wrap:wrap; gap:5px; }
+  .order { background:#21262d; padding:15px; border-radius:8px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
+  .order button { padding:8px 16px; font-size:13px; }
+  .admin-panel { border:1px solid #f0883e; }
+  .support-panel { border:1px solid #3fb950; }
+  .support-msg { background:#21262d; padding:12px; border-radius:8px; margin-bottom:8px; border-left:3px solid #58a6ff; }
+  .support-msg.admin { border-left-color:#3fb950; }
+  .support-msg .author { color:#f0883e; font-weight:bold; font-size:13px; }
+  .support-msg .time { color:#8b949e; font-size:11px; }
+  .support-msg .text { margin-top:5px; }
+  .auth-screen { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:80vh; text-align:center; }
+  .auth-screen h1 { color:#f0883e; margin-bottom:15px; font-size:32px; }
+  .auth-screen p { color:#8b949e; margin-bottom:30px; max-width:500px; }
+</style>
+</head>
+<body>
+
+<div id="authScreen" class="container auth-screen">
+  <h1>🎯 Standoff 2 Upgrader</h1>
+  <p>Войдите через Discord, чтобы крутить колесо, получать скины и пополнять баланс. При первом входе вы получите 20 коинов.</p>
+  <button class="discord-btn" onclick="discordLogin()">Войти через Discord</button>
+</div>
+[29.09.2026 20:38] .: <div id="mainApp" class="hidden">
+<header>
+  <div class="logo">🎯 Standoff 2 Upgrader</div>
+  <div class="user-info">
+    <img id="userAvatar" src="" alt="">
+    <span class="name" id="userName"></span>
+    <div class="balance">Баланс: <span id="balance">0</span> коинов</div>
+    <button onclick="logout()" style="padding:8px 16px;font-size:13px;background:#da3633;">Выйти</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('wheel', event)">Колесо</div>
+    <div class="tab" onclick="showTab('deposit', event)">Пополнение</div>
+    <div class="tab" onclick="showTab('history', event)">История</div>
+    <div class="tab" onclick="showTab('support', event)">Поддержка</div>
+    <div class="tab" onclick="showTab('admin', event)">Админ</div>
+  </div>
+
+  <div id="wheel" class="tab-content">
+    <div class="wheel-section">
+      <h2>Крути колесо — забирай скины Standoff 2</h2>
+      <div class="wheel-container">
+        <div class="arrow">▼</div>
+        <canvas id="wheelCanvas" width="420" height="420"></canvas>
+      </div>
+      <button id="spinBtn" onclick="spin()">Крутить за 5 коинов</button>
+      <div class="result-box" id="resultBox">
+        <h3>Вы выиграли:</h3>
+        <p id="resultText" style="font-size:18px;color:#f0883e;margin-top:10px;"></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="deposit" class="tab-content hidden">
+    <h2>Пополнение баланса</h2>
+    <p style="color:#8b949e;margin:10px 0;">Создайте заявку — админ подтвердит и коины упадут на баланс.</p>
+    <select id="payMethod">
+      <option value="card">Банковская карта</option>
+      <option value="crypto">Криптовалюта (USDT TRC20)</option>
+      <option value="qiwi">QIWI</option>
+    </select>
+    <input type="number" id="amountInput" placeholder="Сумма в рублях" min="100">
+    <input type="text" id="contactInput" placeholder="Ваш контакт (Telegram/email)">
+    <button onclick="createOrder()">Создать заявку</button>
+    <div id="orderResult" style="margin-top:15px;color:#3fb950;"></div>
+  </div>
+
+  <div id="history" class="tab-content hidden">
+    <h2>История операций</h2>
+    <div id="historyList"></div>
+  </div>
+
+  <div id="support" class="tab-content hidden">
+    <div class="support-panel">
+      <h2>💬 Поддержка</h2>
+      <p style="color:#8b949e;margin:10px 0;">Напишите вопрос — администратор ответит.</p>
+      <div id="supportList" style="max-height:400px;overflow-y:auto;margin:15px 0;"></div>
+      <textarea id="supportInput" placeholder="Ваше сообщение..." style="width:100%;padding:12px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;min-height:80px;font-family:inherit;"></textarea>
+      <button onclick="sendSupport()" style="margin-top:10px;">Отправить</button>
+    </div>
+  </div>
+
+  <div id="admin" class="tab-content hidden">
+    <div class="admin-panel">
+      <h2>🔧 Панель администратора</h2>
+      <input type="password" id="adminPass" placeholder="Пароль админа">
+      <button onclick="loginAdmin()">Войти</button>
+      <div id="adminContent" class="hidden">
+        <h3 style="margin:20px 0 10px;">Заявки на пополнение</h3>
+        <div id="ordersList"></div>
+        <h3 style="margin:20px 0 10px;">Сообщения поддержки</h3>
+        <div id="adminSupportList" style="max-height:400px;overflow-y:auto;margin:15px 0;"></div>
+        <textarea id="adminSupportInput" placeholder="Ответ..." style="width:100%;padding:12px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#e6edf3;min-height:80px;font-family:inherit;"></textarea>
+        <button onclick="sendAdminSupport()" style="margin-top:10px;">Ответить</button>
+        <h3 style="margin:20px 0 10px;">Добавить скин в колесо</h3>
+        <input type="text" id="skinName" placeholder="Название скина">
+[29.09.2026 20:38] .: <input type="number" id="skinPrice" placeholder="Цена в коинах">
+        <input type="text" id="skinColor" placeholder="Цвет (hex, например #ff5733)">
+        <button onclick="addSkin()">Добавить</button>
+        <h3 style="margin:20px 0 10px;">Текущие скины</h3>
+        <div id="skinsList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+var DISCORD_CLIENT_ID = "1554498941519798282";
+var DISCORD_REDIRECT_URI = encodeURIComponent(window.location.origin + window.location.pathname);
+var DISCORD_SCOPE = "identify";
+
+var DEFAULT_SKINS = [
+  { name: "AKR-12 | Дракон", price: 5000, color: "#ffd700" },
+  { name: "M4A1 | Призрак", price: 3000, color: "#f0883e" },
+  { name: "AWM | Хищник", price: 8000, color: "#ffd700" },
+  { name: "USP | Неон", price: 500, color: "#58a6ff" },
+  { name: "Нож-бабочка | Кровь", price: 15000, color: "#ffd700" },
+  { name: "Famas | Цифра", price: 800, color: "#58a6ff" },
+  { name: "Deagle | Золото", price: 4000, color: "#f0883e" },
+  { name: "MP5 | Пламя", price: 1200, color: "#58a6ff" },
+  { name: "AK-47 | Вулкан", price: 6500, color: "#ff4500" },
+  { name: "M4 | Сакура", price: 4500, color: "#ff69b4" },
+  { name: "Glock | Неон", price: 1500, color: "#00ff00" },
+  { name: "AWM | Дракон", price: 12000, color: "#ffd700" },
+  { name: "Нож | Керамбит", price: 20000, color: "#ffd700" },
+  { name: "USP | Кибер", price: 2500, color: "#00ffff" },
+  { name: "MP7 | Тигр", price: 1800, color: "#ff8c00" },
+  { name: "Famas | Ролл", price: 600, color: "#58a6ff" }
+];
+
+var currentUser = null;
+var state = {};
+var canvas, ctx, cx = 210, cy = 210, radius = 190;
+
+function getUserKey(userId, field) {
+  return "so2_" + field + "_" + userId;
+}
+
+function loadUserState(userId) {
+  var balance = parseInt(localStorage.getItem(getUserKey(userId, 'balance')));
+  var history = localStorage.getItem(getUserKey(userId, 'history'));
+  var orders = localStorage.getItem(getUserKey(userId, 'orders'));
+  var support = localStorage.getItem(getUserKey(userId, 'support'));
+  return {
+    balance: (balance !== null && !isNaN(balance)) ? balance : 20,
+    history: history ? JSON.parse(history) : [],
+    orders: orders ? JSON.parse(orders) : [],
+    support: support ? JSON.parse(support) : [],
+    skins: JSON.parse(localStorage.getItem('so2_skins') || JSON.stringify(DEFAULT_SKINS)),
+    spinning: false,
+    currentAngle: 0
+  };
+}
+
+function saveUserState() {
+  if (!currentUser) return;
+  localStorage.setItem(getUserKey(currentUser.id, 'balance'), state.balance);
+  localStorage.setItem(getUserKey(currentUser.id, 'history'), JSON.stringify(state.history));
+  localStorage.setItem(getUserKey(currentUser.id, 'orders'), JSON.stringify(state.orders));
+  localStorage.setItem(getUserKey(currentUser.id, 'support'), JSON.stringify(state.support));
+  localStorage.setItem('so2_skins', JSON.stringify(state.skins));
+  updateBalance();
+}
+
+function discordLogin() {
+  var url = "https://discord.com/api/oauth2/authorize?client_id=" + DISCORD_CLIENT_ID + "&redirect_uri=" + DISCORD_REDIRECT_URI + "&response_type=token&scope=" + DISCORD_SCOPE;
+  window.location.href = url;
+}
+
+async function handleDiscordCallback() {
+  var hash = window.location.hash.substring(1);
+  var params = new URLSearchParams(hash);
+  var token = params.get('access_token');
+  if (!token) return false;
+  try {
+    var res = await fetch('https://discord.com/api/users/@me', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!res.ok) throw new Error('Ошибка получения профиля');
+    var user = await res.json();
+    currentUser = {
+      id: user.id,
+      username: user.username,
+      avatar: user.avatar ? ('https://cdn.discordapp.com/avatars/' + user.id + '/' + user.avatar + '.png') : 'https://cdn.discordapp.com/embed/avatars/0.png'
+    };
+    localStorage.setItem('so2_user', JSON.stringify(currentUser));
+    window.history.replaceState({}, document.title, window.location.pathname);
+    return true;
+  } catch (e) {
+    alert('Ошибка входа через Discord: ' + e.message);
+    return false;
+  }
+}
+[29.09.2026 20:38] .: function logout() {
+  localStorage.removeItem('so2_user');
+  currentUser = null;
+  location.reload();
+}
+
+function drawWheel(angle) {
+  ctx.clearRect(0, 0, 420, 420);
+  var skins = state.skins;
+  var sectorAngle = (Math.PI * 2) / skins.length;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+  ctx.translate(-cx, -cy);
+  for (var i = 0; i < skins.length; i++) {
+    var start = i * sectorAngle - Math.PI / 2;
+    var end = start + sectorAngle;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, radius, start, end);
+    ctx.closePath();
+    ctx.fillStyle = skins[i].color;
+    ctx.fill();
+    ctx.strokeStyle = '#0d1117';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(start + sectorAngle / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#0d1117';
+    ctx.font = 'bold 11px Segoe UI';
+    ctx.fillText(skins[i].name.substring(0, 16), radius - 15, 4);
+    ctx.restore();
+  }
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 35, 0, Math.PI * 2);
+  ctx.fillStyle = '#161b22';
+  ctx.fill();
+  ctx.strokeStyle = '#f0883e';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.fillStyle = '#f0883e';
+  ctx.font = 'bold 14px Segoe UI';
+  ctx.textAlign = 'center';
+  ctx.fillText('SO2', cx, cy + 5);
+}
+
+function easeOutCubic(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function spin() {
+  if (state.spinning) return;
+  if (state.balance < 5) { alert('Недостаточно коинов!'); return; }
+  if (state.skins.length < 2) { alert('Нужно минимум 2 скина!'); return; }
+  state.spinning = true;
+  document.getElementById('spinBtn').disabled = true;
+  document.getElementById('resultBox').classList.remove('show');
+  state.balance -= 5;
+  saveUserState();
+  var skins = state.skins;
+  var sectorAngle = (Math.PI * 2) / skins.length;
+  var winIndex = Math.floor(Math.random() * skins.length);
+  var winSkin = skins[winIndex];
+  var targetAngle = -winIndex * sectorAngle - sectorAngle / 2;
+  var fullSpins = Math.PI * 2 * 6;
+  var startAngle = state.currentAngle;
+  var endAngle = startAngle + fullSpins + ((targetAngle - startAngle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+  var duration = 5500;
+  var startTime = performance.now();
+  function animate(now) {
+    var elapsed = now - startTime;
+    var t = Math.min(elapsed / duration, 1);
+    var eased = easeOutCubic(t);
+    state.currentAngle = startAngle + (endAngle - startAngle) * eased;
+    drawWheel(state.currentAngle);
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      state.spinning = false;
+      document.getElementById('spinBtn').disabled = false;
+      state.history.unshift({ type: 'spin', skin: winSkin.name, price: winSkin.price, time: Date.now() });
+      document.getElementById('resultText').textContent = winSkin.name + ' — ' + winSkin.price + ' коинов';
+      document.getElementById('resultBox').classList.add('show');
+      saveUserState();
+    }
+  }
+  requestAnimationFrame(animate);
+}
+
+function showTab(id, e) {
+  var contents = document.querySelectorAll('.tab-content');
+  for (var i = 0; i < contents.length; i++) contents[i].classList.add('hidden');
+  var tabs = document.querySelectorAll('.tab');
+  for (var j = 0; j < tabs.length; j++) tabs[j].classList.remove('active');
+  document.getElementById(id).classList.remove('hidden');
+  if (e && e.target) e.target.classList.add('active');
+  if (id === 'history') renderHistory();
+  if (id === 'support') renderSupport();
+  if (id === 'admin') { renderOrders(); renderAdminSupport(); }
+}
+
+function createOrder() {
+  var method = document.getElementById('payMethod').value;
+  var amount = parseInt(document.getElementById('amountInput').value);
+  var contact = document.getElementById('contactInput').value.trim();
+  if (!amount || amount < 100) { alert('Минимум 100 рублей'); return; }
+[29.09.2026 20:38] .: if (!contact) { alert('Укажите контакт'); return; }
+  var order = { id: Date.now(), method: method, amount: amount, coins: amount, contact: contact, status: 'pending', time: Date.now(), userId: currentUser.id, username: currentUser.username };
+  state.orders.push(order);
+  saveUserState();
+  document.getElementById('orderResult').textContent = 'Заявка #' + order.id + ' создана. Ожидайте подтверждения.';
+  document.getElementById('amountInput').value = '';
+  document.getElementById('contactInput').value = '';
+}
+
+function renderHistory() {
+  var list = document.getElementById('historyList');
+  if (!state.history.length) { list.innerHTML = '<p style="color:#8b949e">Пока пусто</p>'; return; }
+  var html = '';
+  for (var i = 0; i < state.history.length; i++) {
+    var h = state.history[i];
+    html += '<div class="history-item"><span>' + (h.type === 'spin' ? '🎰 Крутка' : '💰 Пополнение') + ': ' + (h.skin || (h.amount + ' коинов')) + '</span><span style="color:#8b949e">' + new Date(h.time).toLocaleString() + '</span></div>';
+  }
+  list.innerHTML = html;
+}
+
+function sendSupport() {
+  var text = document.getElementById('supportInput').value.trim();
+  if (!text) return;
+  var msg = { id: Date.now(), userId: currentUser.id, username: currentUser.username, text: text, fromAdmin: false, time: Date.now() };
+  state.support.push(msg);
+  saveUserState();
+  document.getElementById('supportInput').value = '';
+  renderSupport();
+}
+
+function renderSupport() {
+  var list = document.getElementById('supportList');
+  if (!state.support.length) { list.innerHTML = '<p style="color:#8b949e">Сообщений пока нет</p>'; return; }
+  var html = '';
+  for (var i = 0; i < state.support.length; i++) {
+    var m = state.support[i];
+    html += '<div class="support-msg ' + (m.fromAdmin ? 'admin' : '') + '"><div class="author">' + (m.fromAdmin ? '👑 Админ' : '👤 ' + m.username) + ' <span class="time">' + new Date(m.time).toLocaleString() + '</span></div><div class="text">' + m.text + '</div></div>';
+  }
+  list.innerHTML = html;
+  list.scrollTop = list.scrollHeight;
+}
+
+function loginAdmin() {
+  var pass = document.getElementById('adminPass').value;
+  if (pass === 'admin123') {
+    document.getElementById('adminContent').classList.remove('hidden');
+    renderOrders();
+    renderAdminSupport();
+    renderSkins();
+  } else {
+    alert('Неверный пароль');
+  }
+}
+
+function renderOrders() {
+  var list = document.getElementById('ordersList');
+  var pending = [];
+  for (var i = 0; i < state.orders.length; i++) {
+    if (state.orders[i].status === 'pending') pending.push(state.orders[i]);
+  }
+  if (!pending.length) { list.innerHTML = '<p style="color:#8b949e">Нет активных заявок</p>'; return; }
+  var html = '';
+  for (var j = 0; j < pending.length; j++) {
+    var o = pending[j];
+    html += '<div class="order"><div><b>#' + o.id + '</b> — ' + o.amount + '₽ (' + o.method + ')<br><small style="color:#8b949e">От: ' + o.username + ' | Контакт: ' + o.contact + '</small></div><div><button onclick="approveOrder(' + o.id + ')">✅ Подтвердить</button><button onclick="rejectOrder(' + o.id + ')" style="background:#da3633">❌ Отклонить</button></div></div>';
+  }
+  list.innerHTML = html;
+}
+
+function approveOrder(id) {
+  var o = null;
+  for (var i = 0; i < state.orders.length; i++) {
+    if (state.orders[i].id === id) { o = state.orders[i]; break; }
+  }
+  if (!o) return;
+  o.status = 'approved';
+  if (o.userId === currentUser.id) {
+    state.balance += o.coins;
+    state.history.unshift({ type: 'deposit', amount: o.coins, time: Date.now() });
+    saveUserState();
+  } else {
+    var otherBalance = parseInt(localStorage.getItem(getUserKey(o.userId, 'balance')) || '0');
+    localStorage.setItem(getUserKey(o.userId, 'balance'), otherBalance + o.coins);
+    var otherHistory = JSON.parse(localStorage.getItem(getUserKey(o.userId, 'history')) || '[]');
+[29.09.2026 20:38] .: otherHistory.unshift({ type: 'deposit', amount: o.coins, time: Date.now() });
+    localStorage.setItem(getUserKey(o.userId, 'history'), JSON.stringify(otherHistory));
+  }
+  renderOrders();
+  alert('Заявка #' + id + ' подтверждена. Начислено ' + o.coins + ' коинов.');
+}
+
+function rejectOrder(id) {
+  for (var i = 0; i < state.orders.length; i++) {
+    if (state.orders[i].id === id) { state.orders[i].status = 'rejected'; break; }
+  }
+  saveUserState();
+  renderOrders();
+}
+
+function sendAdminSupport() {
+  var text = document.getElementById('adm
